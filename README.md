@@ -1,21 +1,19 @@
 # zmusic-fetch
 
-A tool to extract audio from YouTube/Bilibili videos and automatically split it into multiple audio files based on timestamp information.
+A tool to extract audio from videos and automatically split it into multiple audio files based on timestamp information.
 
 ## Features
 
-- 🎵 Download audio from YouTube/Bilibili videos (MP3 format)
+- 🎵 Download audio from videos (using yt-dlp)
 - ✂️ Automatically split audio based on timestamp information
-- 📝 Auto-generate CUE files
 - 🌐 Proxy support
-- 🎯 Automatic mp3splt management
 
 ## Requirements
 
 - Python 3.x
 - yt-dlp
-- mp3splt (automatically installed via Homebrew on macOS)
-- FFmpeg (for audio format conversion)
+- mp3splt 
+- FFmpeg
 
 ## Installation
 
@@ -46,12 +44,6 @@ python zgetmusic.py <video_URL>
 
 ```bash
 python zgetmusic.py <video_URL> --splitinfo <timestamp_file>
-```
-
-### Complete Example
-
-```bash
-python zgetmusic.py https://www.bilibili.com/video/BV18oqQBdEnr?t=14.2 --splitinfo 1.txt
 ```
 
 ## Command Line Arguments
@@ -91,12 +83,6 @@ To use a proxy (e.g., for accessing restricted content):
 python zgetmusic.py <video_URL> --proxy http://127.0.0.1:7890 --splitinfo 1.txt
 ```
 
-## Notes
+## Disclaimer
 
-- Ensure sufficient disk space for downloaded audio files
-- Timestamp file must be UTF-8 encoded
-- After splitting is complete, the original audio file and CUE file are automatically deleted
-
-## License
-
-This project is for educational and personal use only. Please comply with the terms of service of the respective video platforms.
+This tool is for educational and personal use only. Use it only if you have the rights to the content and comply with platform terms and local laws. The developers are not responsible for misuse.
