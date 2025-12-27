@@ -119,6 +119,24 @@ def ensure_local_mp3splt():
     os.chmod(local_path, 0o755)
     return local_path
 
+def ensure_ffmpeg():
+    """Ensure ffmpeg is available, install via Homebrew if not found"""
+    if shutil.which("ffmpeg"):
+        print("FFmpeg is already installed.")
+        return
+
+    brew_path = shutil.which("brew")
+    if not brew_path:
+        raise RuntimeError("Homebrew not found; please install Homebrew first or install ffmpeg manually.")
+
+    print("FFmpeg not found. Installing via Homebrew...")
+    subprocess.run([brew_path, "install", "ffmpeg"], check=True)
+
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("FFmpeg installation failed.")
+    
+    print("FFmpeg installed successfully.")
+
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="Download audio from YouTube videos.")
@@ -134,6 +152,10 @@ if __name__ == "__main__":
     if args.output is None or args.output == "":
         args.output = "./outdir"
     os.makedirs(args.output, exist_ok=True)
+    
+    # Ensure ffmpeg is installed
+    ensure_ffmpeg()
+    
     tempdir = args.output
     _mp3 = os.path.join(tempdir, "temp_audio.mp3")
     download_audio_from_youtube(args.url, os.path.splitext(_mp3)[0], args.proxy)
