@@ -36,7 +36,7 @@ def generate_cue(intput_file, output_cue, audio_filename):
 
         time_str, title = match.groups()
 
-        parts = re.split(r"-|\s+", title, maxsplit=1)
+        parts = re.split(r"-", title, maxsplit=1)
         print(title, parts)
 
 
@@ -77,14 +77,14 @@ def download_audio_from_youtube(url, output_path, proxy=None):
                 line = f"\rDownloading: {percent:5.1f}% ({downloaded}/{total} bytes)"
             else:
                 line = f"\rDownloading: {downloaded} bytes"
-            sys.stdout.write(line)
-            sys.stdout.flush()
+            # sys.stdout.write(line)
+            # sys.stdout.flush()
         elif d.get('status') == 'finished':
             sys.stdout.write("\nDownload finished, processing...\n")
 
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': output_path,
+        'outtmpl': {'default': os.path.join(output_path, '%(title)s.%(ext)s')},
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -94,10 +94,38 @@ def download_audio_from_youtube(url, output_path, proxy=None):
         # 'quiet': True,
         'no_warnings': True,
         "proxy": proxy,
+        "quiet": True,
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+        os.makedirs(output_path, exist_ok=True)
+
+        info = ydl.extract_info(url, download=True)
+        if not info:
+            return None
+
+        entries = info.get('entries')
+        if entries:
+            items = []
+            for entry in entries:
+                if not entry:
+                    continue
+                items.append({
+                    'title': entry.get('title'),
+                    'url': entry.get('webpage_url') or entry.get('url'),
+                })
+            return {
+                'playlist_title': info.get('title'),
+                'items': items,
+            }
+
+        return {
+            'title': info.get('title'),
+            'items': [{
+                'title': info.get('title'),
+                'url': info.get('webpage_url') or info.get('url'),
+            }],
+        }
 
 def ensure_local_mp3splt():
     local_path = os.path.join(os.path.dirname(__file__), "mp3splt")
@@ -156,20 +184,23 @@ if __name__ == "__main__":
     # Ensure ffmpeg is installed
     ensure_ffmpeg()
     
-    tempdir = args.output
-    _mp3 = os.path.join(tempdir, "temp_audio.mp3")
-    download_audio_from_youtube(args.url, os.path.splitext(_mp3)[0], args.proxy)
-
-    if args.splitinfo and os.path.isfile(args.splitinfo):
-        mp3splt_path = ensure_local_mp3splt()   
-        cur = os.path.join(tempdir, "output.cue")
-        generate_cue(args.splitinfo, cur, os.path.basename(_mp3))
-        print("CUE file generated as output.cue")
-        output_dir = args.output
-        if not output_dir or not (output_dir.endswith(os.sep) or os.path.isdir(output_dir)):
-            output_dir = os.path.dirname(output_dir) or "."
-        os.makedirs(output_dir, exist_ok=True)
-        subprocess.run([mp3splt_path, "-c", cur, "-o", "@t", "-d", output_dir, _mp3], check=True)
-        print(f"Split audio files saved to {output_dir}")
-        os.remove(cur)
-        os.remove(_mp3)
+    output_dir = args.output
+    ret = download_audio_from_youtube(args.url, output_dir, args.proxy)
+    if ret.get('items', None) is None or len(ret['items']) == 0:
+        print("No downloadable items found.")
+        sys.exit(1)
+    if len(ret.get("items", [])) == 1:
+        if args.splitinfo and os.path.isfile(args.splitinfo):
+            _mp3 = os.path.join(output_dir, f"{ret['items'][0]['title']}.mp3")
+            mp3splt_path = ensure_local_mp3splt()   
+            cur = os.path.join(output_dir, "output.cue")
+            generate_cue(args.splitinfo, cur, os.path.basename(_mp3))
+            print("CUE file generated as output.cue")
+            output_dir = args.output
+            if not output_dir or not (output_dir.endswith(os.sep) or os.path.isdir(output_dir)):
+                output_dir = os.path.dirname(output_dir) or "."
+            os.makedirs(output_dir, exist_ok=True)
+            subprocess.run([mp3splt_path, "-c", cur, "-o", "@t", "-d", output_dir, _mp3], check=True)
+            print(f"Split audio files saved to {output_dir}")
+            os.remove(cur)
+            os.remove(_mp3)
